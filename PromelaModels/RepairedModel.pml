@@ -1,4 +1,4 @@
-//****************************** Repaired Promela model of the Contiki's scheduler
+//****************************** Promela Model of the Contiki's scheduler
 //**************************************************************** Parameters to be set
 //Using SPIN 6.5.0  and iSpin 1.1.1
 //Storage Mode : bitstate/supertrace
@@ -13,31 +13,31 @@
 
 //****************************************************************End of parameters to be set
 //*************************************************************** Model descrption
-// Data structures and global variables: 41-84
+// Data structures and global variables: Lines 44-88
 // Environment Model: 
-//	   Boot-up : 166-171 (Invoke Processes_initialization to initialize environment, then transfer control to the main function)
-//     Processes_initialization: 142-162 (Create atmost max_nProcesses number of Contiki processes and add them into autostart_processes randomly)
-//		main()    : 172-187 (Start autostart processes, then transfer control to the scheduler)
-// 		autostart_start() : 361-378(Start autostart processes)
-//		ISR : 670-686
+//	   Boot-up :  Lines 170-175 (Invoke Processes_initialization to initialize environment, then transfer control to the main function)
+//     Processes_initialization: 146-166 (Create atmost max_nProcesses number of Contiki processes and add them into autostart_processes randomly)
+//		main()    : Lines 176-191 (Start autostart processes, then transfer control to the scheduler)
+// 		autostart_start() : Lines 365-382(Start autostart processes)
+//		ISR : Lines 674-690
 //		other Contiki's macro or functions:
-//				PT_INIT() : 100-108
-//				process_post_synch() : 231-243
-//				process_post(): 244-257
-//				process_start() : 294-321
-//				process_poll() : 338-357
+//				PT_INIT() : Lines 104-112
+//				process_post_synch() : Lines 235-247
+//				process_post(): Lines 248-261
+//				process_start() : Lines 298-325
+//				process_poll() : Lines 342-361
 // Contiki's scheduler functions:
-//		process_run() : 592-609
-//		do_poll() : 513-538
-//		call_process() : 470-511
-//		do_event() : 539-591
-//		exit_process() : 389-468
-//      process_is_running() : 380-388
-//		process thread : 610-668
-//	LTL formula: 690-827
-//  repair1 : 578-582
-//  repair2 : 500-508
-//  repair3 : 418
+//		process_run() : Lines 596-612
+//		do_poll() : Lines 517-542
+//		call_process() : Lines 474-515
+//		do_event() : Lines 543-595
+//		exit_process() : Lines 393-472
+//      process_is_running() : Lines 384-392
+//		process thread : Lines 618-676
+//	LTL formula: Lines 694-831               Verified requirements: 706-747           Detected flaws: 750-832
+//  repair1 : Lines 582-586
+//  repair2 : Lines 504-512
+//  repair3 : Line 422
 //*************************************************************End of model descrption
 
 
@@ -47,6 +47,7 @@
 #define max_nAutoStartProcesses 30
 #define PROCESS_ERR_FULL 1000
 #define NULL 1000
+#define PT_nStatements 5
 
 mtype: process_event_t = {PROCESS_EVENT_NONE , PROCESS_EVENT_INIT, PROCESS_EVENT_POLL, PROCESS_EVENT_EXIT, 
 PROCESS_EVENT_SERVICE_REMOVED, PROCES_EVENT_CONTINUE, PROCESS_EVENT_MSG, PROCESS_EVENT_EXITED,
@@ -613,33 +614,33 @@ proctype process_run(chan syn_chan)//--- process.c\process_run:301-313
 proctype pThread()
 {
 	chan ret_chan = [0] of {int};
-	int ev16; 
+	int recEv; 
 	int r;
 	int rn2=1;
 	int data;  int NP; int stCnt;
-	Assign: pThread_params_chan  ? NULL,ev16,data;
+	Assign: pThread_params_chan  ? NULL,recEv,data;
 	if
-	:: ev16 == ASIGN_PTHREAD -> pThread_sync_chan ! _pid,PT_CREATED; 
-	:: else -> goto Assign;
-	fi;
-	BEGIN: pThread_params_chan  ?  eval(_pid),ev16,data;
+	:: recEv == ASIGN_PTHREAD -> pThread_sync_chan ! _pid,PT_CREATED
+	:: else -> goto Assign
+	fi
+	BEGIN: pThread_params_chan  ?  eval(_pid),recEv,data;
 	if 
-	:: ev16 == PROCESS_EVENT_INIT ->  skip;
-	:: else -> goto BEGIN;
-	fi;
+	:: recEv == PROCESS_EVENT_INIT ->  skip
+	:: else -> goto BEGIN
+	fi
 	stCnt=0;
 	Statements:  if
-						:: stCnt < 5 -> skip;
-						:: else -> goto PTEND;
-						fi;
+						:: stCnt < PT_nStatements -> skip
+						:: else -> goto PTEND
+						fi
 						
 					 select ( r10 : 1 .. 4 );
 					   if
-					  :: (r10==1) -> goto PTEND;
-					  :: (r10==2) -> goto rand_pr;
-					  :: (r10==3) -> goto rand_ev;
-					  :: (r10==4) -> goto PTWAIT;
-					  fi;
+					  :: (r10==1) -> goto PTEND
+					  :: (r10==2) -> goto rand_pr
+					  :: (r10==3) -> goto rand_ev
+					  :: (r10==4) -> goto PTWAIT
+					  fi
 					 
 				rand_pr:NP=_nr_pr;
 											run startRandomProcess(ret_chan);
@@ -656,17 +657,17 @@ proctype pThread()
 									goto Statements;
 					 
 	PTWAIT:  pThread_sync_chan ! _pid,PT_WAITING;
-							pThread_params_chan  ? eval(_pid),ev16,data 
+							pThread_params_chan  ? eval(_pid),recEv,data ;
 							stCnt++;
 							if 
-							:: ev16 == THREAD_INIT -> goto BEGIN;
-							:: else ->  goto Statements;;
+							:: recEv == THREAD_INIT -> goto BEGIN
+							:: else ->  goto Statements
 							fi;
     	
    PTEND:		if 
-						:: (1) -> pThread_sync_chan ! _pid,PT_ENDED; 
-						:: (1) -> pThread_sync_chan ! _pid,PT_EXITED;
-						fi;
+						:: (1) -> pThread_sync_chan ! _pid,PT_ENDED
+						:: (1) -> pThread_sync_chan ! _pid,PT_EXITED
+						fi
 						goto BEGIN; 
 }
 
